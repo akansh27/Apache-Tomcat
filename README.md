@@ -4,11 +4,6 @@
 Tomcat is a web server and servlet container. It implements several Java Enterprise Edition specifications including Java servlet, JSPs,
 Java EL, Websocket and provides ‘pure java’ web HTTP server environment for java codes to run in.
 
-Developer: Apache Software Foundation
-Stable Release: 8.0.18 (23-01-2015)
-Written in: Java
-Type: Servlet container, HTTP web server
-
 ### Features
 The Servlet 3.1 is an incremental update that includes a couple new features and further clarifications to the specification.  One of those
 new features is non-blocking I/O. This is a performance improvement and allows data to be managed asynchronously through a ReadListener and
