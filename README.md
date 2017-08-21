@@ -4,6 +4,15 @@
 Tomcat is a web server and servlet container. It implements several Java Enterprise Edition specifications including Java servlet, JSPs,
 Java EL, Websocket and provides ‘pure java’ web HTTP server environment for java codes to run in.
 
+Tomcat is one of the most popular Servlet and JSP Container servers. It’s used by some of following high traffic websites:
+
+LinkedIn.com
+Dailymail.co.uk
+Comcast.net
+Wallmart.com
+Reuters.com
+Meetup.com
+
 ### Features
 The Servlet 3.1 is an incremental update that includes a couple new features and further clarifications to the specification.  One of those
 new features is non-blocking I/O. This is a performance improvement and allows data to be managed asynchronously through a ReadListener and
@@ -25,3 +34,31 @@ Websockets 1.0 as a standard API is now supported. Tomcat 7 had support, but it 
 wasn’t finalized. Most websites today run HTTP in half-duplex mode—this means that communications can happen in both directions, but only 
 one at a time, like a walkie-talkie. The Websockets protocol is full duplex—this means that bidirectional data can flow at the same time. 
 It was originally proposed with HTML5.
+
+## Apache Tomcat Hardening and Security Guide
+Having default configuration may have much sensitive information, which helps hacker to prepare for an attack the Tomcat server. This practical guide provides you the necessary skill set to secure Apache Tomcat server.
+
+### 1. Remove Server Banner
+Removing Server Banner from HTTP Header is one of the first things to do as hardening. Having server banner expose the product you are using and leads to information leakage vulnerability.
+
+Implementation:
+
+Go to $tomcat/conf folder
+Modify server.xml by using vi
+Add following under Connector port and save the file
+```
+Server =” “
+```
+Ex: –
+```
+<Connector port="8080" protocol="HTTP/1.1" 
+connectionTimeout="20000" 
+Server =" " 
+redirectPort="8443" />
+```
+Verification:
+
+Open Firefox with firebug
+Access Tomcat application
+You will notice Server value is blank now.
+
