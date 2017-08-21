@@ -40,7 +40,7 @@ Having default configuration may have much sensitive information, which helps ha
 
 ### 1. Remove Server Banner
 Removing Server Banner from HTTP Header is one of the first things to do as hardening. Having server banner expose the product you are using and leads to information leakage vulnerability.
-
+![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat-server-banner.png?raw=true "Optional Title")
 Implementation:
 
 Go to $tomcat/conf folder
@@ -61,4 +61,4 @@ Verification:
 Open Firefox with firebug
 Access Tomcat application
 You will notice Server value is blank now.
-
+![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat-server-banner-verification.png?raw=true "Optional Title")
