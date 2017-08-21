@@ -154,7 +154,6 @@ Open Firefox with firebug
 Access your application and check HTTP response header, you should see Secure flag
 
 ![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat-header-secure-flag.png?raw=true "Optional Title")
-
 ### 6. Add HttpOnly in cookie
 Best practice to have this enabled at application code level. However, due to bad programming or developer’s unawareness, it comes to Web Infrastructure.
 
@@ -240,7 +239,6 @@ Ex-
 Having default page for not found, forbidden, server error exposes Tomcat version and that leads to security risk if you are running with vulnerable version. Let’s look at default 404 page.
 
 ![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat-default-404.png?raw=true "Optional Title")
-
 To mitigate, you can first create a general error page and configure web.xml to redirect to general error page.
 
 Implementation:
@@ -275,7 +273,6 @@ Add following in web.xml by using vi. Ensure you add before </web-app> syntax
 Restart tomcat server. Now, let’s test it.
 
 ![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat-custom-error.png?raw=true "Optional Title")
-
 As you can see tomcat information is no more exposed.
 
 You can do this for java.lang.Exception as well. This will help in not exposing tomcat version information if any java lang exception.
