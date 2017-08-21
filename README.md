@@ -7,10 +7,15 @@ Java EL, Websocket and provides ‘pure java’ web HTTP server environment for 
 Tomcat is one of the most popular Servlet and JSP Container servers. It’s used by some of following high traffic websites:
 
 LinkedIn.com
+
 Dailymail.co.uk
+
 Comcast.net
+
 Wallmart.com
+
 Reuters.com
+
 Meetup.com
 
 ### Features
