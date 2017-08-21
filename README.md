@@ -42,6 +42,7 @@ Having default configuration may have much sensitive information, which helps ha
 Removing Server Banner from HTTP Header is one of the first things to do as hardening. Having server banner expose the product you are using and leads to information leakage vulnerability.
 
 ![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat-server-banner.png?raw=true "Optional Title")
+
 Implementation:
 
 Go to $tomcat/conf folder
@@ -57,6 +58,7 @@ connectionTimeout="20000"
 Server =" " 
 redirectPort="8443" />
 ```
+
 Verification:
 
 Open Firefox with firebug
