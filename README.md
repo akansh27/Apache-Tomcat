@@ -40,6 +40,14 @@ wasn’t finalized. Most websites today run HTTP in half-duplex mode—this mean
 one at a time, like a walkie-talkie. The Websockets protocol is full duplex—this means that bidirectional data can flow at the same time. 
 It was originally proposed with HTML5.
 
+## An Overview of Tomcat Servlet Container
+
+![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat6-article3-image01.png?raw=true "Optional Title")
+
+The objective of this article is to cover the primary request processing components that are present in this image. Advanced topics, such as clustering and security, are shown as shaded in this image and are not covered.
+
+In this image, the '+' symbol after the Service, Host, Context, and Wrapper instances indicate that there can be one or more of these elements. For instance, a Service may have a single Engine, but an Engine can contain one or more Hosts. In addition, the whirling circle represents a pool of request processor threads.
+
 ## Apache Tomcat Hardening and Security Guide
 Having default configuration may have much sensitive information, which helps hacker to prepare for an attack the Tomcat server. This practical guide provides you the necessary skill set to secure Apache Tomcat server.
 
