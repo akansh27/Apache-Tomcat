@@ -48,6 +48,58 @@ The objective of this article is to cover the primary request processing compone
 
 In this image, the '+' symbol after the Service, Host, Context, and Wrapper instances indicate that there can be one or more of these elements. For instance, a Service may have a single Engine, but an Engine can contain one or more Hosts. In addition, the whirling circle represents a pool of request processor threads.
 
+Tomcat's architecture follows the construction of a Matrushka doll from Russia. In other words, it is all about containment where one entity contains another, and that entity in turn contains yet another.
+
+In Tomcat, a 'container' is a generic term that refers to any component that can contain another, such as a Server, Service, Engine, Host, or Context.
+
+Of these, the Server and Service components are special containers, designated as Top Level Elements as they represent aspects of the running Tomcat instance. All the other Tomcat components are subordinate to these top level elements.
+
+The Engine, Host, and Context components are officially termed Containers, and refer to components that process incoming requests and generate an appropriate outgoing response.
+
+Nested Components can be thought of as sub-elements that can be nested inside either Top Level Elements or other Containers to configure how they function. Examples of nested components include the Valve, which represents a reusable unit of work; the Pipeline, which represents a chain of Valves strung together; and a Realm which helps set up container-managed security for a particular container.
+
+Other nested components include the Loader which is used to enforce the specification's guidelines for servlet class loading; the Manager that supports session management for each web application; the Resources component that represents the web application's static resources and a mechanism to access these resources; and the Listener that allows you to insert custom processing at important points in a container's life cycle, such as when a component is being started or stopped.
+
+Not all nested components can be nested within every container.
+
+A final major component, which falls into its own category, is the Connector. It represents the connection end point that an external client (such as a web browser) can use to connect to the Tomcat container.
+
+Before we go on to examine these components, let's take a quick look at how they are organized structurally.
+
+![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat6-article3-image02.png?raw=true "Optional Title")
+
+When Tomcat is started, the Java Virtual Machine (JVM) instance in which it runs will contain a singleton Server top level element, which represents the entire Tomcat server. A Server will usually contain just one Service object, which is a structural element that combines one or more Connectors (for example, an HTTP and an HTTPS connector) that funnel incoming requests through to a single Catalina servlet Engine.
+
+The Engine represents the core request processing code within Tomcat and supports the definition of multiple Virtual Hosts within it. A virtual host allows a single running Tomcat engine to make it seem to the outside world that there are multiple separate domains (for example, www.my-site.com and www.your-site.com) being hosted on a single machine.
+
+Each virtual host can, in turn, support multiple web applications known as Contexts that are deployed to it. A context is represented using the web application format specified by the servlet specification, either as a single compressed WAR (Web Application Archive) file or as an uncompressed directory. In addition, a context is configured using a web.xml file, as defined by the servlet specification.
+
+A context can, in turn, contain multiple servlets that are deployed into it, each of which is wrapped in a Wrapper component.
+
+The Server, Service, Connector, Engine, Host, and Context elements that will be present in a particular running Tomcat instance are configured using the server.xml configuration file.
+
+### Top Level Components
+
+The Server and Service container components exist largely as structural conveniences. A Server represents the running instance of Tomcat and contains one or more Service children, each of which represents a collection of request processing components.
+
+#### Server
+
+A Server represents the entire Tomcat instance and is a singleton within a Java Virtual Machine, and is responsible for managing the life cycle of its contained services.
+
+The following image depicts the key aspects of the Server component. As shown, a Server instance is configured using the server.xml configuration file. The root element of this file is <Server> and represents the Tomcat instance. Its default implementation is provided using org.apache.catalina.core.StandardServer, but you can specify your own custom implementation through the className attribute of the <Server> element.
+
+![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat6-article3-image03.png?raw=true "Optional Title")
+
+A key aspect of the Server is that it opens a server socket on port 8005 (the default) to listen a shutdown command (by default, this command is the text string SHUTDOWN). When this shutdown command is received, the server gracefully shuts itself down. For security reasons, the connection requesting the shutdown must be initiated from the same machine that is running this instance of Tomcat.
+
+A Server also provides an implementation of the Java Naming and Directory Interface (JNDI) service, allowing you to register arbitrary objects (such as data sources) or environment variables, by name.
+
+At runtime, individual components (such as servlets) can retrieve this information by looking up the desired object name in the server's JNDI bindings.
+
+While a JNDI implementation is not integral to the functioning of a servlet container, it is part of the Java EE specification and is a service that servlets have a right to expect from their application servers or servlet containers. Implementing this service makes for easy portability of web applications across containers.
+
+While there is always just one server instance within a JVM, it is entirely possible to have multiple server instances running on a single physical machine, each encased in its own JVM. Doing so insulates web applications that are running on one VM from errors in applications that are running on others, and simplifies maintenance by allowing a JVM to be restarted independently of the others. This is one of the mechanisms used in a shared hosting environment (the other is virtual hosting, which we will see shortly) where you need isolation from other web applications that are running on the same physical server.
+
 ## Apache Tomcat Hardening and Security Guide
 Having default configuration may have much sensitive information, which helps hacker to prepare for an attack the Tomcat server. This practical guide provides you the necessary skill set to secure Apache Tomcat server.
 
