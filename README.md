@@ -156,7 +156,7 @@ The engine returns the response to the connector, which then transmits it back t
 
 In this section, we'll take a look at the key request processing components within Tomcat; the engine, virtual host, and context components.
 
-### *Engine
+### Engine
 
 An Engine represents a running instance of the Catalina servlet engine and comprises the heart of a servlet container's function. There can only be one engine within a given service. Being a true container, an Engine may contain one or more virtual hosts as children.
 
@@ -184,7 +184,7 @@ There are two common ways to set up virtual hosting:
 * IP-based virtual hosting
 * Name-based virtual hosting
 
-### *IP-based virtual hosting
+### IP-based virtual hosting
 
 With this technique, each FQHN resolves to a separate IP address. However, each of these IP addresses resolves to the same physical machine.
 
@@ -203,7 +203,7 @@ For example, you can have a web server that is running on a particular physical 
 
 When a request comes in on 11.156.33.346, the server knows that it should serve content from the www.host2.com, and does so. To the user, this is indistinguishable from an entirely separate physical server.
 
-### *Name-based virtual hosting
+### Name-based virtual hosting
 
 ![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat6-article3-image09.png?raw=true "Optional Title")
 
@@ -270,8 +270,206 @@ A wrapper is responsible for the servlet that it represents, including loading i
 
 It is also responsible, through its basic valve, for the invocation of the filters that are associated with the wrapped servlet.
 
+## Nested components
 
+These components are specific to the Tomcat implementation, and their primary purpose is to enable the various Tomcat containers to perform their tasks.
 
+### Valve
+
+A valve is a processing element that can be placed within the processing path of each of Tomcat's containers—engine, host, context, or a servlet wrapper. A Valve is added to a container using the <Valve> element in server.xml. They are executed in the order in which they are encountered within the server.xml file.
+
+The Tomcat distribution comes with a number of pre-rolled valves. These include:
+
+* A valve that logs specific elements of a request (such as the remote client's IP address) to a log file or database
+* A valve that lets you control access to a particular web application based on the remote client's IP address or host name
+* A valve that lets you log every request and response header
+* A valve that lets you configure single sign-on access across multiple web applications on a specific virtual host
+
+If these don't meet your needs, you can write your own implementations of org.apache.catalina.Valve and place them into service.
+
+![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat6-article3-image12.png?raw=true "Optional Title")
+
+A container does not hold references to individual valves. Instead, it holds a reference to a single entity known as the Pipeline, which represents a chain of valves associated with that container.
+
+When a container is invoked to process a request, it delegates the processing to its associated pipeline.
+
+The valves in a pipeline are arranged as a sequence, based on how they are defined within the server.xml file. The final valve in this sequence is known as the pipeline's basic valve. This valve performs the task that embodies the core purpose of a given container.
+
+Unlike individual valves, the pipeline is not an explicit element in server.xml, but instead is implicitly defined in terms of the sequence of valves that are associated with a given container.
+
+Each Valve is aware of the next valve in the pipeline. After it performs its pre processing, it invokes the next Valve in the chain, and when the call returns, it performs its own post processing before returning.
+
+This is very similar to what happens in filter chains within the servlet specification.
+
+In this image, the engine's configured valve(s) fire when an incoming request is received. An engine's basic valve determines the destination host and delegates processing to that host. The destination host's (www.host1.com) valves now fire in sequence. The host's basic valve then determines the destination context (here, Context1) and delegates processing to it. The valves configured for Context1 now fire and processing is then delegated by the context's basic valve to the appropriate wrapper, whose basic valve hands off processing to its wrapped servlet.
+
+The response then returns over the same path in reverse.
+
+A Valve becomes part of the Tomcat server's implementation and provides a way for developers to inject custom code into the servlet container's processing of a request. As a result, the class files for custom valves must be deployed to CATALINA_HOME/lib, rather than to the WEB-INF/classes of a deployed application.
+
+As they are not part of the servlet specification, valves are non-portable elements of your enterprise application. Therefore, if you rely on a particular valve, you will need to find equivalent alternatives in a different application server.
+
+It is important to note that valves are required to be very efficient in order not to introduce inordinate delays into the processing of a request.
+
+### Realm
+
+Container managed security works by having the container handle the authentication and authorization aspects of an application.
+
+Authentication is defined as the task of ensuring that the user is who she says she is, and authorization is the task of determining whether the user may perform some specific action within an application.
+
+The advantage of container managed security is that security can be configured declaratively by the application's deployer. That is, the assignment of passwords to users and the mapping of users to roles can all be done through configuration, which can then be applied across multiple web applications without any coding changes being required to those web applications.
+
+##### Application Managed Security
+
+The alternative is having the application manage security. In this case, your web application code is the sole arbiter of whether a user may access some specific functionality or resource within your application.
+
+For Container managed security to work, you need to assemble the following components:
+
+* Security constraints: Within your web application's deployment descriptor, web.xml, you must identify the URL patterns for restricted resources, as well as the user roles that would be permitted to access these resources.
+* Credential input mechanism: In the web.xml deployment descriptor, you specify how the container should prompt the user for authentication credentials. This is usually accomplished by showing the user a dialog that prompts the user for a user name and password, but can also be configured to use other mechanisms such as a custom login form.
+* Realm: This is a data store that holds user names, passwords, and roles, against which the user-supplied credentials are checked. It can be a simple XML file, a table in a relational database that is accessed using the JDBC API, or a Lightweight Directory Access Protocol (LDAP) server that can be accessed through the JNDI API. A realm provides Tomcat with a consistent mechanism of accessing these disparate data sources.
+
+All three of the above components are technically independent of each other. The power of container based security is that you can assemble your own security solution by mixing and matching selections from each of these groups.
+
+Now, when a user requests a resource, Tomcat will check to see whether a security constraint exists for this resource. For a restricted resource, Tomcat will then automatically request the user for her credentials and will then check these credentials against the configured realm. Access to the resource will be allowed only if the user's credentials are valid and if the user is a member of the role that is configured to access that resource.
+
+### Executor
+
+This is a new element, available only since 6.0.11. It allows you to configure a shared thread pool that is available to all your connectors. This places an upper limit on the number of concurrent threads that may be started by your connectors. Note that this limit applies even if a particular connector has not used up all the threads configured for it.
+
+### Listener
+
+Every major Tomcat component implements the org.apache.catalina.Lifecycle interface. This interface lets interested listeners to register with a component, to be notified of lifecycle events, such as the starting or stopping of that component.
+
+A listener implements the org.apache.catalina.LifecycleListener interface and implements its lifecycleEvent() method, which takes a LifecycleEvent that represents the event that has occurred.
+
+This gives you an opportunity to inject your own custom processing into Tomcat's lifecycle.
+
+### Manager
+
+Sessions allows 'applications' to be made possible over the stateless HTTP protocol. A session represents a conversation between a client and a server and is implemented by a javax.servlet.http.HttpSession instance that is stored on the server and is associated with a unique identifier that is passed back by the client on each interaction.
+
+A new session is created on request and remains alive on the server either until it times out after a period of inactivity by its associated client, or until it is explicitly invalidated, for instance, by the client choosing to log out.
+
+![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat6-article3-image13.png?raw=true "Optional Title")
+
+The above image shows a very simplistic view of the session mechanism within Tomcat.
+
+An org.apache.catalina.Manager component is used by the Catalina engine to create, find, or invalidate sessions. This component is responsible for the sessions that are created for a context and their life cycles.
+
+The default Manager implementation simply retains sessions in memory, but supports session survival across server restarts. It writes out all active sessions to disk when the server is stopped and will reload them into memory when the server is started up again.
+
+A <Manager> must be a child of a <Context> element and is responsible for managing the sessions associated with that web application context.
+
+The default Manager takes attributes such as the algorithm that is used to generate its session identifiers, the frequency in seconds with which the manager should check for expired sessions, the maximum number of active sessions supported, and the file in which the sessions should be stored.
+
+Other implementations of Manager are provided that let you persist sessions to a durable data store such as a file or a JDBC database.
+
+### Loader
+
+This element represents the class loader for a given web application. A class loader is a very sacred entity in Java. In its most basic form, it is responsible for locating the bytecode that represents a compiled Java class and interpreting it.
+
+The bytecode for a given class may be found in a variety of locations, the most common being either on the local file system or over the network. A class loader's primary goal is to abstract away the process of how the bytes are obtained and reconstituted into a class in memory.
+
+##### Delegation model
+
+Since Java 2, the class loading mechanism has used a delegating model, where the class loaders within a JVM are organized in a parent-child hierarchy. It is recommended that each class loader first delegate the task of finding and loading a class to its parent before it may attempt to do so itself.
+
+This delegation mechanism ensures that no application can load in a malicious version of a system class (such as java.lang.Object) that may then compromise the integrity of the applications that are running in the JVM.
+
+At the top of this class loader hierarchy is the Bootstrap class loader, called the primordial class loader, which is written in native code and is part of the JVM itself. Being part of the JVM ensures that there is at least one class loader that can be relied upon to load the core Java classes, such as java.lang.Object. This class loader is responsible for loading classes from the core Java packages (such as java.lang or java.util). In the Sun JVM implementation, these classes are found in JAVA_HOME/jre/lib/rt.jar. The Bootstrap class loader is unique in that, it is at the top of the tree, and so has no parent class loader.
+
+Next down the hierarchy is the Extension class loader which, in the Sun JVM, is a java.net.URLClassLoader that monitors the JAVA_HOME/jre/lib/ext folder for extension JARs. Any JARs placed in this folder are automatically loaded without needing to be on the class path.
+
+Finally, there is the System class loader (or Application class loader), which is also a URLClassLoader in the Sun JVM implementation. It monitors the folders and JARs that are described in the CLASSPATH. This class loader is responsible for loading the application's main class.
+
+If a normal application needs to load a class (such as java.lang.String), it will first ask the System class loader for it. The System class loader delegates to the Extension class loader, which in turn delegates to the Bootstrap class loader, which locates the String.class file in rt.jar, loads the class and makes it available as an instance of java.lang.Class.
+
+If an application-specific class file, such as com.swengsol.UserModel.class, is requested, the delegation process works just as before. However, this time the Bootstrap class loader is unable to locate this class in rt.jar. Next, it is the turn of the Extension class loader, and it too is unsuccessful. Finally, the System class loader has a go, and locates the class on its CLASSPATH. This class is then loaded and made available for the JVM to use.
+
+Caching occurs within each class loader, so each must first check its own cache to see if the class was loaded earlier. If a hit is found, then the class is returned right away.
+
+In our previous example, if the application needed to use another String, then the Bootstrap class loader would return its cached instance of the String class.
+
+##### Endorsed Standards Override Mechanism
+
+*Both J2SE 1.4 and 1.5 include a Java API for XML Processing Parser. The classes for this parser are loaded by the Bootstrap class loader, and so take precedence over any parser that you might have installed on your classpath, even if you have a newer version of the parser classes installed. The Endorsed Standards Override Mechanism lets you place overrides to certain classes (CORBA and JAXP classes) in the JAVA_HOME/lib/endorsed folder. The Bootstrap loader will then load these preferentially over any classes that it might otherwise find. For details on this mechanism, see http://java.sun.com/j2se/1.5.0/docs/guide/standards/.
+
+###### Some interesting points to note about class loading are as follows:
+
+* A class is considered fully qualified only when it is described in terms of its package name, its class name, and the class loader instance that was used to load that class. In other words, the same class loaded by two different class loaders is treated as two distinct classes. This has implications for the assignment of instances of this class and treatment of static fields or singletons, even within a single JVM.
+* Each class loader can only see the class locations that are above it in the hierarchy. For example, a JAR in the Extension folder cannot use a class file on the application's CLASSPATH. This is because the classes in the Extension folder can only see classes that are served up by either the Extension class loader or the Bootstrap class loader.
+* When code in a class references another class, the referenced class is loaded using the same class loader that loaded the referencing class, called its defining class loader. The defining class loader for a class can be obtained using Class.getClassLoader().
+* Every thread has a context class loader that can be accessed using Thread.currentThread().getContextClassLoader(). Every time a thread is created, its context class loader is set to that of its creating thread. The class loader for the main() thread is the System class loader, which is automatically propagated down to each worker thread, unless you intervene by invoking Thread.currentThread().setContextClassLoader().
+
+##### Java EE class loading
+
+The Java EE world throws in a bit of a twist into this model.
+
+A servlet container is required to provide a restricted environment for its web applications.
+
+If a servlet were to directly use the System class loader, then it would be able to see every class that was on the class path for the JVM command that was used to start Tomcat. This is potentially a security risk, as a malicious web application (as in a hosting vendor's deployment) may be able to load classes of its sibling web applications.
+
+As a result, each web application must be given its very own class loader, which is placed at the bottom of the tree and preferentially loads classes that are found in the WEB-INF/classes and WEB-INF/lib folders of the web application directory.
+
+This custom class loader will only delegate to its parent class loader when the class that is being requested is one of the standard Java classes.
+
+When a web application needs any other class, instead of delegating to its parent, this custom class loader will first check within the WEB-INFclasses and WEB-INFlib folders.
+
+Only if it is not found there will it delegate to its parent class loader, which will then follow the standard delegating pattern.
+
+###### Tomcat's additional class loaders
+
+![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat6-article3-image14.png?raw=true "Optional Title")
+
+During startup, Tomcat first neutralizes the System class loader by clearing out the CLASSPATH and resetting it to point to CATALINA_HOME/bin/bootstrap.jar (for the classes required for Tomcat to start up), tomcat-juli.jar (for logging), and tools.jar (for the JSP compiler). This leaves the System class loader useful only for loading a minimal set of Tomcat-specific classes.
+
+Tomcat also changes the endorsed directory to point to CATALINA_HOME/endorsed.
+
+Below it, Tomcat establishes its own hierarchy of class loaders by appending the Server class loader, the Shared class loader, the Common class loader, and one web application class loader per deployed application.
+
+When a web application needs to load a class, the request first comes to the web application class loader, which is responsible (as described above) for loading the classes in the web application's WEB-INF/classes and WEB-INF/lib folders.
+
+This class loader first delegates to the System class loader to allow the delegation hierarchy to locate any core Java classes. If the requested class cannot be found, then the web application class loader attempts to locate the class within its own repositories. If the class is still not found, it will delegate to the Common class loader, or to the Shared class loader if it is installed.
+
+The Shared class loader and the Server class loader are not instantiated by default. You can enable them by editing the CATALINA_HOME/conf/catalina.properties file and adding the shared.loader and server.loader entries.
+
+The Common class loader monitors the contents of the CATALINA_HOME/lib folder, which contains commonly used JARs such as servlet-api.jar, jasper.jar, coyote.jar, and jsp-api.jar.
+
+Classes that are placed in the Shared loader directory will be available to all web applications, but not to Tomcat's internal classes, whereas classes that are placed in the Server loader directory will be available only to Tomcat's internal classes.
+
+##### Class reloading in web applications
+
+Having a web application-specific class loader enables Tomcat to support class reloading.
+
+When a context needs to be redeployed or when a class needs to be reloaded (such as when a recompiled class file is copied into WEB-INFclasses), the entire web application class loader is discarded, and a brand new instance is created to load all the classes for this web application.
+
+This new class loader is now used to service all future requests.
+
+### Logger
+
+The Logger element in server.xml has been deprecated since Tomcat 5.5. Instead, logging in Tomcat 6 is based on the Java Logging API that was introduced in Java 1.4.
+
+Java Logging could only be configured at the entire JVM level and not at the per class loader level. To allow a different configuration file per web application, Tomcat implemented its own Java Logging implementation, known as JULI and implemented in CATALINA_HOME/bin/tomcat-juli.jar.
+
+The global CATALINA_HOME/conf/logging.properties file controls the debug log settings. In addition, each web application can have its own logging configuration file, WEB-INF/classes/logging.properties.
+
+![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat6-article3-image15.png?raw=true "Optional Title")
+
+As shown in the image above, logging is comprised of the following components:
+
+* Logger: All logging requests are made to Logger objects. These objects are arranged in a hierarchy, rooted at a root logger. This hierarchy mirrors the package hierarchy of classes. Properties can be tied to any level within this hierarchy, and a child Logger inherits properties from its parent.
+* Handler: It specifies the location where log messages should be sent. Options include a ConsoleHandler (which writes to the console), a FileHandler (which writes to a file), and a SocketHandler (which writes to a TCP socket).
+* Level: This is one of seven levels, SEVERE, WARNING, INFO, CONFIG, FINE, FINER, FINEST, OFF (disabled), and ALL (all messages logged), that define which message types are logged.
+* Formatter: This element determines how the information is formatted for display. Tomcat provides both a SimpleFormatter and an XMLFormatter for this purpose.
+
+### Resources
+
+The resources associated with a web application context include static resources such as classes, HTML, JSP, and CSS files. These resources may exist in a variety of storage formats. By default, Tomcat supports retrieval of resources from either a compressed WAR file, or from an exploded folder laid out in the WAR format.
+
+It is conceivable that a context's resources may also be accessed from alternative storage mechanisms, such as a JDBC database. The Resources component makes this possible.
+
+Tomcat provides a directory service implementation of the JNDI API, that supports access of resources in a storage-agnostic manner.
 
 ## Apache Tomcat Hardening and Security Guide
 Having default configuration may have much sensitive information, which helps hacker to prepare for an attack the Tomcat server. This practical guide provides you the necessary skill set to secure Apache Tomcat server.
