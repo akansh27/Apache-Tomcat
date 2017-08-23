@@ -100,6 +100,179 @@ While a JNDI implementation is not integral to the functioning of a servlet cont
 
 While there is always just one server instance within a JVM, it is entirely possible to have multiple server instances running on a single physical machine, each encased in its own JVM. Doing so insulates web applications that are running on one VM from errors in applications that are running on others, and simplifies maintenance by allowing a JVM to be restarted independently of the others. This is one of the mechanisms used in a shared hosting environment (the other is virtual hosting, which we will see shortly) where you need isolation from other web applications that are running on the same physical server.
 
+### Service
+
+While the Server represents the Tomcat instance itself, a Service represents the set of request processing components within Tomcat.
+
+![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat6-article3-image04.png?raw=true "Optional Title")
+
+A Server can contain more than one Service, where each service associates a group of Connector components with a single Engine.
+
+Requests from clients are received on a connector, which in turn funnels them through into the engine, which is the key request processing component within Tomcat. The image shows connectors for HTTP, HTTPS, and the Apache JServ Protocol (AJP).
+
+There is very little reason to modify this element, and the default Service instance is usually sufficient.
+
+A hint as to when you might need more than one Service instance can be found in the above image. As shown, a service aggregates connectors, each of which monitors a given IP address and port, and responds in a given protocol. An example use case for having multiple services, therefore, is when you want to partition your services (and their contained engines, hosts, and web applications) by IP address and/or port number.
+
+For instance, you might configure your firewall to expose the connectors for one service to an external audience, while restricting your other service to hosting intranet applications that are visible only to internal users. This would ensure that an external user could never access your Intranet application, as that access would be blocked by the firewall.
+
+The Service, therefore, is nothing more than a grouping construct. It does not currently add any other value to the proceedings.
+
+### Connectors
+
+A Connector is a service endpoint on which a client connects to the Tomcat container. It serves to insulate the engine from the various communication protocols that are used by clients, such as HTTP, HTTPS, or the Apache JServ Protocol (AJP).
+
+Tomcat can be configured to work in two modes—Standalone or in Conjunction with a separate web server.
+
+![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat6-article3-image05.png?raw=true "Optional Title")
+
+In standalone mode, Tomcat is configured with HTTP and HTTPS connectors, which make it act like a full-fledged web server by serving up static content when requested, as well as by delegating to the Catalina engine for dynamic content.
+
+Out of the box, Tomcat provides three possible implementations of the HTTP/1.1 and HTTPS connectors for this mode of operation.
+
+The most common are the standard connectors, known as Coyote which are implemented using standard Java I/O mechanisms.
+
+You may also make use of a couple of newer implementations, one which uses the non-blocking NIO features of Java 1.4, and the other which takes advantage of native code that is optimized for a particular operating system through the Apache Portable Runtime (APR).
+
+Note that both the Connector and the Engine run in the same JVM. In fact, they run within the same Server instance.
+
+![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat6-article3-image06.png?raw=true "Optional Title")
+
+In conjunction mode, Tomcat plays a supporting role to a web server, such as Apache httpd or Microsoft's IIS. The client here is the web server, communicating with Tomcat either through an Apache module or an ISAPI DLL. When this module determines that a request must be routed to Tomcat for processing, it will communicate this request to Tomcat using AJP, a binary protocol that is designed to be more efficient than the text based HTTP when communicating between a web server and Tomcat.
+
+On the Tomcat side, an AJP connector accepts this communication and translates it into a form that the Catalina engine can process.
+
+In this mode, Tomcat is running in its own JVM as a separate process from the web server.
+
+In either mode, the primary attributes of a Connector are the IP address and port on which it will listen for incoming requests, and the protocol that it supports. Another key attribute is the maximum number of request processing threads that can be created to concurrently handle incoming requests. Once all these threads are busy, any incoming request will be ignored until a thread becomes available.
+
+By default, a connector listens on all the IP addresses for the given physical machine (its address attribute defaults to 0.0.0.0). However, a connector can be configured to listen on just one of the IP addresses for a machine. This will constrain it to accept connections from only that specified IP address.
+
+Any request that is received by any one of a service's connectors is passed on to the service's single engine. This engine, known as Catalina, is responsible for the processing of the request, and the generation of the response.
+
+The engine returns the response to the connector, which then transmits it back to the client using the appropriate communication protocol.
+
+### Container components
+
+In this section, we'll take a look at the key request processing components within Tomcat; the engine, virtual host, and context components.
+
+### *Engine
+
+An Engine represents a running instance of the Catalina servlet engine and comprises the heart of a servlet container's function. There can only be one engine within a given service. Being a true container, an Engine may contain one or more virtual hosts as children.
+
+![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat6-article3-image07.png?raw=true "Optional Title")
+
+Being the primary request processing component, it receives objects that represent the incoming request and the outgoing response. Its main function is to delegate the processing of the incoming request to the appropriate virtual host. If the engine has no virtual host with a name matching the one to which the request should be directed, it consults its defaultHost attribute to determine the host that should be used.
+
+## Virtual host
+
+A virtual host in Tomcat is represented by the Host component, which is a container for web applications, or, in Tomcat parlance, contexts.
+
+Two key concepts come into play when working with virtual hosts—the host's domain name and its application base folder.
+
+* Domain name:Each virtual host is identified by the domain name that you registered for use with this host. This is the value that you expect the client browser to send in the Host: request header. A host's name is required to be unique within its containing engine.
+* Application base folder: This folder is the location that contains the contexts that will be deployed to this host. This folder location can either be specified as an absolute path or as a path relative to CATALINA_BASE.
+
+*CATALINA_HOME is an environment variable that references the location of the Tomcat binaries. The CATALINA_BASE environment variable makes it possible to use a single binary installation of Tomcat to run multiple Tomcat instances with different configurations (which are primarily determined by the contents of the conf folder).
+
+*In addition, the use of a CATALINA_BASE location that is separate from CATALINA_HOME keeps the standard binary distribution separate from your installation. This has the beneficial effect of making it easy to upgrade to a newer Tomcat version, without having to worry about clobbering your existing web applications and related configuration files.
+
+### Virtual host techniques
+
+There are two common ways to set up virtual hosting:
+
+* IP-based virtual hosting
+* Name-based virtual hosting
+
+### *IP-based virtual hosting
+
+With this technique, each FQHN resolves to a separate IP address. However, each of these IP addresses resolves to the same physical machine.
+
+![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat6-article3-image08.png?raw=true "Optional Title")
+
+You can achieve this by using either of the following mechanisms:
+
+* A multi-homed server, that is, a machine that has multiple physical Network Interface Cards (NICs) installed, each of which has an assigned IP address.
+* Using operating system facilities to set up virtual network interfaces by dynamically assigning multiple IP addresses to a single physical NIC.
+
+In either case, the downside is that we need to acquire multiple IP addresses, and these addresses (at least for IPv4) are a limited resource.
+
+The web server is configured to listen on ports that are assigned to each of these IP addresses, and when it detects an incoming request on a particular IP address, it generates the response appropriate for that address.
+
+For example, you can have a web server that is running on a particular physical host that is monitoring port 80 on both 11.156.33.345 and 11.156.33.346. It is configured to respond to requests that are coming in on the former IP address with content that is associated with a particular host name, say www.host1.com, whereas it is www.host2.com for the latter.
+
+When a request comes in on 11.156.33.346, the server knows that it should serve content from the www.host2.com, and does so. To the user, this is indistinguishable from an entirely separate physical server.
+
+### *Name-based virtual hosting
+
+![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat6-article3-image09.png?raw=true "Optional Title")
+
+This is a newer technique that lets you map different domain names to the same IP address. The domain names are registered as normal, and multiple DNS entries exist to map these domain names to the same IP address.
+
+The HTTP/1.1 protocol requires that every request must contain a Host: header that carries the fully qualified host name, as well as the port number (if specified) to which the user wishes to connect. The web server that runs on the host at the IP address will receive this request and will read this header to determine the specific virtual host that should handle this request.
+
+Name-based virtual hosting is preferred for its simplicity and for the fact that it does not use up IP addresses needlessly.
+
+However, you may have to use IP-based virtual hosting when you are using virtual hosts together with SSL. The reason is that the negotiation protocol commits to a certificate before it pays heed to the specific virtual host for which the request is being made. This is because the SSL protocol layer works at a lower level than the HTTP protocol, and the module negotiating this handshake with the client cannot read the HTTP request header until the handshake is complete.
+
+*You may be able to use name-based virtual hosting with SSL if your web server and client supports the Server Name Indication extension as specified in RFC 3546—Transport Layer Security Extensions (http://www.ietf.org/rfc/rfc3546.txt). Using this extension, during the SSL negotiation, the client also transmits the host name to which it is trying to connect, thereby allowing the web server to handle the handshake appropriately by returning the certificate for the correct host name.
+
+#### Virtual host aliasing
+
+Aliasing works by informing the web server that if it sees the aliased domain name in the Host: header, it should be treated in exactly the same manner as the virtual host's domain name.
+
+For example, if you set up swengsol.com as an alias for the www.swengsol.com virtual host, then typing either domain name in the URL will result in the same virtual host being used to process the request.
+
+This works well when a particular host may be known by more than one domain name, and you don't want to clutter your configuration file by creating one set of entries per alias that a user may use to connect to that host.
+
+### Context
+
+A Context, or web application, is where your application specific code (servlets and JSPs) live. It provides a neat way to organize the resources that comprise a given web application.
+
+![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat6-article3-image10.png?raw=true "Optional Title")
+
+A context maps to a ServletContext instance within the servlet specification. In many ways, the servlet specification is primarily concerned with this context component. For instance, it mandates the format for deploying a context, and dictates the contents of the deployment descriptor.
+
+Important attributes for a context include:
+
+* Document base: This is the path name, either absolute or relative to its containing host's application base, to where its WAR file or exploded folder (its content root) are located.
+* Context path: It represents the portion of the URL that uniquely identifies a web application within a given host. It helps the host container to determine which of its deployed contexts should be responsible for handling an incoming request.
+
+One of your contexts may be identified as the default context. This context is then the application that will be invoked when no context path is specified on the URL. This default context is identified by specifying an empty string as its context path, and as such, can be referenced by using a URL that only specifies a hostname. The default application is identified in Tomcat by a folder named ROOT in the application base folder for a given host.
+
+* Automatic reload: A context's resources can be monitored for changes, and the context reloaded automatically when any changes are detected. While this is remarkably useful during development, this is an expensive operation and should be turned off in production.
+
+##### Context configuration
+
+A Context is unique because it has multiple options when it comes to its configuration. We have already noted the presence of the conf/server.xml file that is used to set up the overall structure of the Tomcat instance. While this file's <Context> element can be used to configure a context, this is no longer recommended.
+
+Instead, Tomcat lets you configure a Context by letting you extract the <Context> element from the server.xml file and move it into a separate file called a context fragment file. Context fragments are monitored and reloaded by Tomcat at runtime.
+
+Note that the server.xml file is only ever loaded once at startup.
+
+To ensure a clear separation of contexts by host and engine, Tomcat expects to find context fragments using a specific directory path CATALINA_HOME/conf/<EngineName>/<HostName>/. The context fragments for contexts deployed into this host are found within this folder and are named <ContextPath>.xml.
+
+For the default case, that is, an engine named Catalina and a host named localhost, this works out to be the folder CATALINA_HOME/conf/Catalina/localhost. However, the name of the host could be any valid domain name, for example, www.swengsol.com, resulting in a folder named CATALINA_HOME/conf/Catalina/www.swengsol.com.
+
+In addition, context fragments may also be found embedded within the META-INF folder of a web application's WAR file or exploded directory. In such cases, the fragment must be named context.xml.
+
+Contexts can also be configured using the web application deployment descriptor, web.xml. While the fragment file is proprietary to Tomcat, the deployment descriptor is described by the servlet specification, and therefore is portable across Java EE compliant servlet containers.
+
+### Wrapper
+
+A Wrapper object is a child of the context container and represents an individual servlet (or a JSP file converted to a servlet). It is called a Wrapper because it wraps an instance of a javax.servlet.Servlet.
+
+![Alt text](https://github.com/farashahamad/Apache-Tomcat/blob/master/tomcat6-article3-image11.png?raw=true "Optional Title")
+
+This is the lowest level of the Container hierarchy, and any attempt to add a child to it will result in an exception being thrown.
+
+A wrapper is responsible for the servlet that it represents, including loading it, instantiating it, and invoking its lifecycle methods such as init(), service(), and destroy().
+
+It is also responsible, through its basic valve, for the invocation of the filters that are associated with the wrapped servlet.
+
+
+
+
 ## Apache Tomcat Hardening and Security Guide
 Having default configuration may have much sensitive information, which helps hacker to prepare for an attack the Tomcat server. This practical guide provides you the necessary skill set to secure Apache Tomcat server.
 
